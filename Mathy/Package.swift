@@ -19,12 +19,12 @@ let package = Package(
             exclude: [
                 "Info.plist",
                 "Mathy.entitlements",
-                "Resources/mathy_server.py",
                 "Assets.xcassets",
             ],
             resources: [
                 .copy("Resources/latex_preview.html"),
                 .copy("Resources/katex"),
+                .copy("Resources/mathy_server.py"),
             ]
         ),
     ]

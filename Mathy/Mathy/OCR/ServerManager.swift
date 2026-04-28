@@ -18,7 +18,34 @@ final class ServerManager: ObservableObject {
         guard status != .running, status != .starting else { return }
         status = .starting
         restartCount = 0
-        launchServer()
+
+        // Check if server is already running (e.g. started manually)
+        Task {
+            if await isServerAlreadyRunning() {
+                print("[ServerManager] Server already running on port \(Constants.serverPort)")
+                status = .running
+                return
+            }
+            launchServer()
+        }
+    }
+
+    private func isServerAlreadyRunning() async -> Bool {
+        guard let url = URL(string: "\(Constants.serverBaseURL)/health") else { return false }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200 else {
+                return false
+            }
+            struct HealthResponse: Decodable {
+                let status: String
+                let model_loaded: Bool
+            }
+            let health = try JSONDecoder().decode(HealthResponse.self, from: data)
+            return health.model_loaded
+        } catch {
+            return false
+        }
     }
 
     func stop() {
@@ -47,11 +74,21 @@ final class ServerManager: ObservableObject {
             return
         }
 
+        print("[ServerManager] Launching: \(pythonPath) \(serverScript)")
+
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: pythonPath)
         proc.arguments = [serverScript, String(Constants.serverPort)]
+
+        let errPipe = Pipe()
         proc.standardOutput = FileHandle.nullDevice
-        proc.standardError = FileHandle.nullDevice
+        proc.standardError = errPipe
+        errPipe.fileHandleForReading.readabilityHandler = { handle in
+            let data = handle.availableData
+            if let str = String(data: data, encoding: .utf8), !str.isEmpty {
+                print("[mathy-server] \(str)", terminator: "")
+            }
+        }
 
         proc.terminationHandler = { [weak self] process in
             Task { @MainActor in
@@ -114,33 +151,60 @@ final class ServerManager: ObservableObject {
         }
     }
 
+    /// Resolves the project root by walking up from known paths.
+    private static func findProjectRoot() -> URL? {
+        // Try SOURCE_ROOT env (set by Xcode builds)
+        if let sourceRoot = ProcessInfo.processInfo.environment["SOURCE_ROOT"] {
+            // SOURCE_ROOT points to Mathy/, go up one level
+            let candidate = URL(fileURLWithPath: sourceRoot).deletingLastPathComponent()
+            if FileManager.default.fileExists(atPath: candidate.appendingPathComponent("server/mathy_server.py").path) {
+                return candidate
+            }
+            // Or SOURCE_ROOT is already the project root
+            if FileManager.default.fileExists(atPath: URL(fileURLWithPath: sourceRoot).appendingPathComponent("server/mathy_server.py").path) {
+                return URL(fileURLWithPath: sourceRoot)
+            }
+        }
+
+        // Walk up from the executable/bundle location
+        var dir = Bundle.main.bundleURL
+        for _ in 0..<8 {
+            if FileManager.default.fileExists(atPath: dir.appendingPathComponent("server/mathy_server.py").path) {
+                return dir
+            }
+            dir = dir.deletingLastPathComponent()
+        }
+
+        return nil
+    }
+
     private func findPython() -> String? {
         let userDefault = UserDefaults.standard.string(forKey: "pythonPath")
-        if let userDefault, FileManager.default.isExecutableFile(atPath: userDefault) {
+        if let userDefault, !userDefault.isEmpty, FileManager.default.isExecutableFile(atPath: userDefault) {
             return userDefault
         }
 
-        // Check common paths
-        let candidates = [
-            // Project venv
-            Bundle.main.bundleURL
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .deletingLastPathComponent()
-                .appendingPathComponent(".venv/bin/python3").path,
-            "/usr/local/bin/python3",
+        var candidates = [String]()
+
+        // Project venv (most reliable for this project)
+        if let root = Self.findProjectRoot() {
+            candidates.append(root.appendingPathComponent(".venv/bin/python3").path)
+        }
+
+        candidates += [
             "/opt/homebrew/bin/python3",
+            "/usr/local/bin/python3",
             "/usr/bin/python3",
         ]
 
         for path in candidates {
             if FileManager.default.isExecutableFile(atPath: path) {
+                print("[ServerManager] Found Python at: \(path)")
                 return path
             }
         }
 
-        // Try `which python3`
+        // Fallback: `which python3`
         let which = Process()
         which.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         which.arguments = ["python3"]
@@ -151,6 +215,7 @@ final class ServerManager: ObservableObject {
         let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         if let output, !output.isEmpty {
+            print("[ServerManager] Found Python via which: \(output)")
             return output
         }
 
@@ -163,16 +228,13 @@ final class ServerManager: ObservableObject {
             return bundled
         }
 
-        // Check project directory (development)
-        let devPath = Bundle.main.bundleURL
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appendingPathComponent("server/mathy_server.py").path
-
-        if FileManager.default.fileExists(atPath: devPath) {
-            return devPath
+        // Check project root
+        if let root = Self.findProjectRoot() {
+            let path = root.appendingPathComponent("server/mathy_server.py").path
+            if FileManager.default.fileExists(atPath: path) {
+                print("[ServerManager] Found server script at: \(path)")
+                return path
+            }
         }
 
         return nil
