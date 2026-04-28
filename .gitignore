@@ -25,3 +25,6 @@ build/
 
 # KaTeX (bundled, but large)
 # Mathy/Mathy/Resources/katex/
+
+# MkDocs build output
+site/
