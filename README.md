@@ -5,7 +5,7 @@
 </p>
 
 [![CI](https://github.com/FaroutYLq/mathy/actions/workflows/ci.yml/badge.svg)](https://github.com/FaroutYLq/mathy/actions/workflows/ci.yml)
-[![Documentation](https://readthedocs.org/projects/mathy-ocr/badge/?version=latest)](https://mathy-ocr.readthedocs.io/en/latest/)
+[![Documentation](https://readthedocs.org/projects/mathy/badge/?version=latest)](https://mathy.readthedocs.io/en/latest/)
 [![Download](https://img.shields.io/github/v/release/FaroutYLq/mathy?label=Download)](https://github.com/FaroutYLq/mathy/releases/latest)
 
 A macOS menu bar app that captures math equations from your screen and converts them to LaTeX using [pix2tex/LaTeX-OCR](https://github.com/lukas-blecher/LaTeX-OCR).
@@ -46,7 +46,7 @@ Once running, Mathy appears as a calligraphic **M** icon in the menu bar.
 
 ## Documentation
 
-Full technical documentation is available at [mathy-ocr.readthedocs.io](https://mathy-ocr.readthedocs.io/en/latest/), covering architecture, build instructions, project structure, and implementation details.
+Full technical documentation is available at [mathy.readthedocs.io](https://mathy.readthedocs.io/en/latest/), covering architecture, build instructions, project structure, and implementation details.
 
 ## License
 
