@@ -61,16 +61,17 @@ Once running, Mathy appears as an **f(x)** icon in the menu bar.
 ## Architecture
 
 ```
-┌──────────────────┐       HTTP        ┌──────────────────┐
-│   Mathy.app      │ <──────────────>  │  mathy-server    │
-│   (Swift/SwiftUI)│   localhost:8765   │  (Python/FastAPI) │
-│                  │                    │                  │
-│  - Menu bar UI   │  POST /predict    │  - pix2tex model │
-│  - Screen capture│  ──────────────>  │  - Loaded once   │
-│  - Hotkey        │                    │  - Fast inference│
-│  - KaTeX preview │  {"latex": "..."}  │                  │
-│  - History       │  <────────────── │                  │
-└──────────────────┘                    └──────────────────┘
+┌────────────────────┐                    ┌────────────────────┐
+│     Mathy.app      │       HTTP         │    mathy-server    │
+│   (Swift/SwiftUI)  │ <──────────────>   │  (Python/FastAPI)  │
+│                    │  localhost:8765     │                    │
+│  - Menu bar UI     │                    │  - pix2tex model   │
+│  - Screen capture  │  POST /predict     │  - Loaded once     │
+│  - Hotkey          │  ──────────────>   │  - Fast inference  │
+│  - KaTeX preview   │                    │                    │
+│  - History         │  {"latex": "..."}  │                    │
+│                    │  <──────────────   │                    │
+└────────────────────┘                    └────────────────────┘
 ```
 
 The app manages the server automatically:
