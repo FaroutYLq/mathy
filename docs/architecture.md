@@ -5,14 +5,14 @@
 ```
 +--------------------+                    +--------------------+
 |     Mathy.app      |       HTTP         |    mathy-server    |
-|   (Swift/SwiftUI)  | <---------------> |  (Python/FastAPI)  |
+|   (Swift/SwiftUI)  | <--------------->  |  (Python/FastAPI)  |
 |                    |  localhost:8765    |                    |
 |  - Menu bar UI     |                    |  - pix2tex model   |
 |  - Screen capture  |  POST /predict     |  - Loaded once     |
-|  - Hotkey          |  ---------------> |  - Fast inference  |
+|  - Hotkey          |  --------------->  |  - Fast inference  |
 |  - KaTeX preview   |                    |                    |
 |  - History         |  {"latex": "..."}  |                    |
-|                    |  <--------------- |                    |
+|                    |  <---------------  |                    |
 +--------------------+                    +--------------------+
 ```
 
