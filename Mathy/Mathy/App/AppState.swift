@@ -13,7 +13,7 @@ final class AppState: ObservableObject {
     @Published var lastResult: ConversionRecord?
     @Published var showPreview = false
     @Published var isProcessing = false
-    @Published var needsSetup = true
+    @Published var needsSetup = false
 
     let serverManager = ServerManager()
     let captureManager = ScreenCaptureManager()
@@ -26,6 +26,7 @@ final class AppState: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var previewPanel: PreviewPanel?
     private var onboardingWindow: NSWindow?
+    private var windowCloseObserver: Any?
 
     enum ServerStatus: String {
         case stopped = "Stopped"
@@ -135,6 +136,22 @@ final class AppState: ObservableObject {
             window.center()
             window.isReleasedWhenClosed = false
             onboardingWindow = window
+
+            // Break retain cycle (self → window → hostingView → environmentObject → self)
+            // by releasing the window reference when the user closes it via the X button.
+            windowCloseObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.onboardingWindow = nil
+                    if let obs = self?.windowCloseObserver {
+                        NotificationCenter.default.removeObserver(obs)
+                        self?.windowCloseObserver = nil
+                    }
+                }
+            }
         }
         onboardingWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -143,7 +160,12 @@ final class AppState: ObservableObject {
     func completeOnboarding() {
         needsSetup = false
         onboardingWindow?.close()
+        // Observer handles cleanup, but nil out explicitly for immediate release
         onboardingWindow = nil
+        if let obs = windowCloseObserver {
+            NotificationCenter.default.removeObserver(obs)
+            windowCloseObserver = nil
+        }
         startServer()
     }
 

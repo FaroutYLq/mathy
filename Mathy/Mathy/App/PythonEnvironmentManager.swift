@@ -102,9 +102,13 @@ final class PythonEnvironmentManager: ObservableObject {
             installArgs += ["pix2tex", "fastapi", "uvicorn[standard]", "python-multipart", "Pillow"]
         }
 
-        let (installStatus, _) = await runProcessStreaming(Self.venvPip, arguments: installArgs)
-        if installStatus != 0 {
-            stage = .failed("Installation failed. Check the log for details.")
+        let installResult = await runProcessStreaming(Self.venvPip, arguments: installArgs)
+        if installResult.status != 0 {
+            if installResult.timedOut {
+                stage = .failed("Installation timed out after 10 minutes.\nCheck your network connection and try again.")
+            } else {
+                stage = .failed("Installation failed. Check the log for details.")
+            }
             return
         }
 
@@ -130,6 +134,14 @@ final class PythonEnvironmentManager: ObservableObject {
 
     // MARK: - Process Helpers
 
+    struct ProcessResult {
+        let status: Int32
+        let output: String
+        let timedOut: Bool
+    }
+
+    /// Run a process in background, return (exitCode, combinedOutput).
+    /// Uses readabilityHandler to drain the pipe and avoid deadlock on large output.
     private func runProcess(_ executable: String, arguments: [String]) async -> (Int32, String) {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
@@ -139,37 +151,15 @@ final class PythonEnvironmentManager: ObservableObject {
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = pipe
-                do {
-                    try proc.run()
-                    proc.waitUntilExit()
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(data: data, encoding: .utf8) ?? ""
-                    continuation.resume(returning: (proc.terminationStatus, output))
-                } catch {
-                    continuation.resume(returning: (-1, error.localizedDescription))
-                }
-            }
-        }
-    }
 
-    private func runProcessStreaming(_ executable: String, arguments: [String]) async -> (Int32, String) {
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                let proc = Process()
-                proc.executableURL = URL(fileURLWithPath: executable)
-                proc.arguments = arguments
-                let pipe = Pipe()
-                proc.standardOutput = pipe
-                proc.standardError = pipe
-
-                var fullOutput = ""
+                let lock = NSLock()
+                var collected = ""
                 pipe.fileHandleForReading.readabilityHandler = { handle in
                     let data = handle.availableData
                     if let str = String(data: data, encoding: .utf8), !str.isEmpty {
-                        fullOutput += str
-                        Task { @MainActor in
-                            self?.installLog += str
-                        }
+                        lock.lock()
+                        collected += str
+                        lock.unlock()
                     }
                 }
 
@@ -177,10 +167,70 @@ final class PythonEnvironmentManager: ObservableObject {
                     try proc.run()
                     proc.waitUntilExit()
                     pipe.fileHandleForReading.readabilityHandler = nil
-                    continuation.resume(returning: (proc.terminationStatus, fullOutput))
+                    lock.lock()
+                    let output = collected
+                    lock.unlock()
+                    continuation.resume(returning: (proc.terminationStatus, output))
                 } catch {
                     pipe.fileHandleForReading.readabilityHandler = nil
                     continuation.resume(returning: (-1, error.localizedDescription))
+                }
+            }
+        }
+    }
+
+    /// Run a process in background, streaming output to installLog. Includes timeout.
+    private func runProcessStreaming(_ executable: String, arguments: [String], timeout: TimeInterval = 600) async -> ProcessResult {
+        await withCheckedContinuation { continuation in
+            // Strong self capture is intentional — we want log updates to continue
+            // even if the view is dismissed. AppState holds us alive anyway.
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: executable)
+                proc.arguments = arguments
+                let pipe = Pipe()
+                proc.standardOutput = pipe
+                proc.standardError = pipe
+
+                let lock = NSLock()
+                var fullOutput = ""
+                var didTimeout = false
+                pipe.fileHandleForReading.readabilityHandler = { handle in
+                    let data = handle.availableData
+                    if let str = String(data: data, encoding: .utf8), !str.isEmpty {
+                        lock.lock()
+                        fullOutput += str
+                        lock.unlock()
+                        Task { @MainActor in
+                            self.installLog += str
+                        }
+                    }
+                }
+
+                do {
+                    try proc.run()
+
+                    let timer = DispatchSource.makeTimerSource(queue: .global())
+                    timer.schedule(deadline: .now() + timeout)
+                    timer.setEventHandler {
+                        lock.lock()
+                        didTimeout = true
+                        lock.unlock()
+                        if proc.isRunning { proc.terminate() }
+                    }
+                    timer.resume()
+
+                    proc.waitUntilExit()
+                    timer.cancel()
+                    pipe.fileHandleForReading.readabilityHandler = nil
+                    lock.lock()
+                    let output = fullOutput
+                    let timedOut = didTimeout
+                    lock.unlock()
+                    continuation.resume(returning: ProcessResult(status: proc.terminationStatus, output: output, timedOut: timedOut))
+                } catch {
+                    pipe.fileHandleForReading.readabilityHandler = nil
+                    continuation.resume(returning: ProcessResult(status: -1, output: error.localizedDescription, timedOut: false))
                 }
             }
         }

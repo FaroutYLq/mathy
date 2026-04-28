@@ -121,7 +121,7 @@ struct OnboardingView: View {
             .padding(8)
             .background(Color.primary.opacity(0.03))
             .cornerRadius(6)
-            .onChange(of: envManager.installLog) { _ in
+            .onReceive(envManager.$installLog) { _ in
                 proxy.scrollTo("logBottom", anchor: .bottom)
             }
         }

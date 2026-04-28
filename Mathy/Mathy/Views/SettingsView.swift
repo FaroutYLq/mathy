@@ -5,6 +5,7 @@ import LaunchAtLogin
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
     @AppStorage("autoCopy") private var autoCopy = true
+    @State private var showReinstallConfirm = false
 
     var body: some View {
         TabView {
@@ -62,10 +63,18 @@ struct SettingsView: View {
                 Spacer()
 
                 Button("Reinstall...") {
-                    appState.stopServer()
-                    appState.envManager.resetEnvironment()
-                    appState.needsSetup = true
-                    appState.showOnboarding()
+                    showReinstallConfirm = true
+                }
+                .alert("Reinstall OCR Engine?", isPresented: $showReinstallConfirm) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Reinstall", role: .destructive) {
+                        appState.stopServer()
+                        appState.envManager.resetEnvironment()
+                        appState.needsSetup = true
+                        appState.showOnboarding()
+                    }
+                } message: {
+                    Text("This will remove and reinstall the OCR engine. It may take a few minutes.")
                 }
             }
         }

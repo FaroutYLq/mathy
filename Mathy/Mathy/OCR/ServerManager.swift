@@ -26,7 +26,7 @@ final class ServerManager: ObservableObject {
                 status = .running
                 return
             }
-            launchServer()
+            await launchServer()
         }
     }
 
@@ -59,8 +59,8 @@ final class ServerManager: ObservableObject {
         status = .stopped
     }
 
-    private func launchServer() {
-        let pythonPath = findPython()
+    private func launchServer() async {
+        let pythonPath = await findPython()
         guard let pythonPath else {
             print("Python not found")
             status = .error
@@ -100,7 +100,7 @@ final class ServerManager: ObservableObject {
                     let delay = Double(self.restartCount) * 2.0
                     print("Server crashed. Restarting in \(delay)s (attempt \(self.restartCount)/\(self.maxRestarts))")
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    self.launchServer()
+                    await self.launchServer()
                 } else {
                     self.status = .error
                 }
@@ -178,7 +178,7 @@ final class ServerManager: ObservableObject {
         return nil
     }
 
-    private func findPython() -> String? {
+    private func findPython() async -> String? {
         // 1. Managed venv (auto-installed by onboarding)
         let managedPython = PythonEnvironmentManager.venvPython
         if FileManager.default.isExecutableFile(atPath: managedPython) {
@@ -211,22 +211,26 @@ final class ServerManager: ObservableObject {
             }
         }
 
-        // 4. Fallback: `which python3`
-        let which = Process()
-        which.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-        which.arguments = ["python3"]
-        let pipe = Pipe()
-        which.standardOutput = pipe
-        try? which.run()
-        which.waitUntilExit()
-        let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        if let output, !output.isEmpty {
-            print("[ServerManager] Found Python via which: \(output)")
-            return output
+        // 4. Fallback: `which python3` (run off main thread to avoid blocking UI)
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let which = Process()
+                which.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+                which.arguments = ["python3"]
+                let pipe = Pipe()
+                which.standardOutput = pipe
+                try? which.run()
+                which.waitUntilExit()
+                let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if let output, !output.isEmpty {
+                    print("[ServerManager] Found Python via which: \(output)")
+                    continuation.resume(returning: output)
+                } else {
+                    continuation.resume(returning: nil)
+                }
+            }
         }
-
-        return nil
     }
 
     private func findServerScript() -> String? {
