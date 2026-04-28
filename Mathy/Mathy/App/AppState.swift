@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     @Published var lastResult: ConversionRecord?
     @Published var showPreview = false
     @Published var isProcessing = false
+    @Published var needsSetup = false
 
     let serverManager = ServerManager()
     let captureManager = ScreenCaptureManager()
@@ -20,9 +21,12 @@ final class AppState: ObservableObject {
     let clipboardManager = ClipboardManager()
     let historyStore = HistoryStore()
     let hotkeyManager = HotkeyManager()
+    let envManager = PythonEnvironmentManager()
 
     private var cancellables = Set<AnyCancellable>()
     private var previewPanel: PreviewPanel?
+    private var onboardingWindow: NSWindow?
+    private var windowCloseObserver: Any?
 
     enum ServerStatus: String {
         case stopped = "Stopped"
@@ -34,7 +38,20 @@ final class AppState: ObservableObject {
     init() {
         setupHotkey()
         setupServerMonitoring()
-        startServer()
+        checkSetupAndStart()
+    }
+
+    private func checkSetupAndStart() {
+        Task {
+            let ready = await envManager.checkExistingSetup()
+            if ready {
+                needsSetup = false
+                startServer()
+            } else {
+                needsSetup = true
+                showOnboarding()
+            }
+        }
     }
 
     private func setupHotkey() {
@@ -100,6 +117,59 @@ final class AppState: ObservableObject {
     func copyToClipboard(_ text: String) {
         clipboardManager.copy(text)
     }
+
+    // MARK: - Onboarding
+
+    func showOnboarding() {
+        if onboardingWindow == nil {
+            let view = OnboardingView(envManager: envManager)
+                .environmentObject(self)
+            let hostingView = NSHostingView(rootView: view)
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 440),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            window.contentView = hostingView
+            window.title = "Mathy"
+            window.center()
+            window.isReleasedWhenClosed = false
+            onboardingWindow = window
+
+            // Break retain cycle (self → window → hostingView → environmentObject → self)
+            // by releasing the window reference when the user closes it via the X button.
+            windowCloseObserver = NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification,
+                object: window,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.onboardingWindow = nil
+                    if let obs = self?.windowCloseObserver {
+                        NotificationCenter.default.removeObserver(obs)
+                        self?.windowCloseObserver = nil
+                    }
+                }
+            }
+        }
+        onboardingWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func completeOnboarding() {
+        needsSetup = false
+        onboardingWindow?.close()
+        // Observer handles cleanup, but nil out explicitly for immediate release
+        onboardingWindow = nil
+        if let obs = windowCloseObserver {
+            NotificationCenter.default.removeObserver(obs)
+            windowCloseObserver = nil
+        }
+        startServer()
+    }
+
+    // MARK: - Preview
 
     private func showPreviewPopup(record: ConversionRecord) {
         if previewPanel == nil {

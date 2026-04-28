@@ -6,6 +6,114 @@ struct MenuBarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if appState.needsSetup {
+                setupSection
+            } else {
+                normalSection
+            }
+
+            Divider()
+
+            // Footer actions
+            if !appState.needsSetup {
+                if #available(macOS 14.0, *) {
+                    SettingsLink {
+                        HStack {
+                            Image(systemName: "gear")
+                            Text("Settings...")
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                } else {
+                    Button {
+                        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    } label: {
+                        HStack {
+                            Image(systemName: "gear")
+                            Text("Settings...")
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                }
+            }
+
+            Button {
+                appState.stopServer()
+                NSApp.terminate(nil)
+            } label: {
+                HStack {
+                    Image(systemName: "xmark.circle")
+                    Text("Quit Mathy")
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+        .frame(width: 280)
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Setup needed
+
+    private var setupSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "arrow.down.circle")
+                    .foregroundColor(.orange)
+                Text(setupStatusText)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if isSetupInProgress {
+                    ProgressView()
+                        .scaleEffect(0.6)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+
+            Button {
+                appState.showOnboarding()
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.right.circle")
+                    Text("Open Setup...")
+                }
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+        }
+    }
+
+    private var setupStatusText: String {
+        switch appState.envManager.stage {
+        case .idle: return "Setup required"
+        case .checkingPython: return "Checking Python..."
+        case .creatingVenv: return "Creating environment..."
+        case .installingDeps: return "Installing OCR engine..."
+        case .verifying: return "Verifying..."
+        case .ready: return "Ready — finishing up..."
+        case .failed: return "Setup failed"
+        }
+    }
+
+    private var isSetupInProgress: Bool {
+        switch appState.envManager.stage {
+        case .checkingPython, .creatingVenv, .installingDeps, .verifying: return true
+        default: return false
+        }
+    }
+
+    // MARK: - Normal operation
+
+    private var normalSection: some View {
+        Group {
             // Status header
             HStack {
                 Circle()
@@ -74,47 +182,7 @@ struct MenuBarView: View {
 
                 Divider()
             }
-
-            // Footer actions
-            if #available(macOS 14.0, *) {
-                SettingsLink {
-                    HStack {
-                        Image(systemName: "gear")
-                        Text("Settings...")
-                    }
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-            } else {
-                Button {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-                } label: {
-                    HStack {
-                        Image(systemName: "gear")
-                        Text("Settings...")
-                    }
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-            }
-
-            Button {
-                appState.stopServer()
-                NSApp.terminate(nil)
-            } label: {
-                HStack {
-                    Image(systemName: "xmark.circle")
-                    Text("Quit Mathy")
-                }
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
         }
-        .frame(width: 280)
-        .padding(.vertical, 4)
     }
 
     private var statusColor: Color {

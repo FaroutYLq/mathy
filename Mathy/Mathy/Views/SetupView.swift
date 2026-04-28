@@ -1,105 +1,207 @@
 import SwiftUI
 
-struct SetupView: View {
+struct OnboardingView: View {
     @EnvironmentObject var appState: AppState
-    @State private var pythonFound = false
-    @State private var pix2texInstalled = false
-    @State private var serverWorking = false
-    @State private var isChecking = false
-    @State private var errorMessage: String?
+    @ObservedObject var envManager: PythonEnvironmentManager
+    @State private var showLog = false
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Mathy Setup")
-                .font(.title)
+        VStack(spacing: 0) {
+            headerSection
+            Divider()
+            stepsSection
+            Spacer()
+            actionSection
+        }
+        .frame(width: 520, height: 440)
+        .onAppear {
+            if envManager.stage == .idle {
+                Task { await envManager.runSetup() }
+            }
+        }
+    }
 
-            Text("Let's make sure everything is configured correctly.")
+    // MARK: - Header
+
+    private var headerSection: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "function")
+                .font(.system(size: 36))
+                .foregroundColor(.accentColor)
+
+            Text(headerTitle)
+                .font(.title2.bold())
+
+            Text(headerSubtitle)
+                .font(.callout)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.vertical, 20)
+        .padding(.horizontal, 32)
+    }
 
-            VStack(alignment: .leading, spacing: 12) {
-                checkRow(title: "Python 3 found", checked: pythonFound)
-                checkRow(title: "pix2tex installed", checked: pix2texInstalled)
-                checkRow(title: "Server responding", checked: serverWorking)
+    private var headerTitle: String {
+        switch envManager.stage {
+        case .ready: return "You're all set!"
+        case .failed: return "Setup Issue"
+        default: return "Setting up Mathy"
+        }
+    }
+
+    private var headerSubtitle: String {
+        switch envManager.stage {
+        case .idle, .checkingPython:
+            return "Checking your system..."
+        case .creatingVenv:
+            return "Creating the OCR environment..."
+        case .installingDeps:
+            return "Installing the LaTeX recognition engine.\nThis takes a few minutes on first run."
+        case .verifying:
+            return "Almost there..."
+        case .ready:
+            return "Press \u{2318}\u{21E7}M to capture any equation."
+        case .failed:
+            return "Something went wrong during setup."
+        }
+    }
+
+    // MARK: - Steps
+
+    private var stepsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            stepRow("Python 3", status: pythonStepStatus)
+            stepRow("OCR engine", status: depsStepStatus)
+            stepRow("Ready", status: readyStepStatus)
+
+            if showLog || isFailed {
+                logView
             }
-            .padding()
-            .background(Color.primary.opacity(0.03))
-            .cornerRadius(8)
+        }
+        .padding(24)
+    }
 
-            if let error = errorMessage {
-                Text(error)
-                    .foregroundColor(.red)
-                    .font(.caption)
-            }
-
-            HStack {
-                Button("Run Checks") {
-                    runChecks()
-                }
-                .disabled(isChecking)
-
-                if isChecking {
+    private func stepRow(_ title: String, status: StepStatus) -> some View {
+        HStack(spacing: 10) {
+            Group {
+                switch status {
+                case .pending:
+                    Image(systemName: "circle")
+                        .foregroundColor(.secondary)
+                case .inProgress:
                     ProgressView()
-                        .scaleEffect(0.7)
+                        .scaleEffect(0.6)
+                        .frame(width: 16, height: 16)
+                case .done:
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                case .failed:
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.red)
                 }
             }
+            .frame(width: 16)
 
-            if pythonFound && !pix2texInstalled {
-                Text("Install pix2tex by running:\npip install pix2tex")
-                    .font(.system(.caption, design: .monospaced))
-                    .padding()
-                    .background(Color.primary.opacity(0.03))
-                    .cornerRadius(4)
-            }
-        }
-        .padding(30)
-        .frame(width: 400)
-        .onAppear { runChecks() }
-    }
-
-    private func checkRow(title: String, checked: Bool) -> some View {
-        HStack {
-            Image(systemName: checked ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(checked ? .green : .secondary)
             Text(title)
+                .font(.body)
         }
     }
 
-    private func runChecks() {
-        isChecking = true
-        errorMessage = nil
+    private var logView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                Text(envManager.installLog)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled)
+                    .id("logBottom")
+            }
+            .frame(maxHeight: 140)
+            .padding(8)
+            .background(Color.primary.opacity(0.03))
+            .cornerRadius(6)
+            .onReceive(envManager.$installLog) { _ in
+                proxy.scrollTo("logBottom", anchor: .bottom)
+            }
+        }
+    }
 
-        Task {
-            // Check Python
-            let pythonCheck = Process()
-            pythonCheck.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-            pythonCheck.arguments = ["python3"]
-            let pipe = Pipe()
-            pythonCheck.standardOutput = pipe
-            try? pythonCheck.run()
-            pythonCheck.waitUntilExit()
-            pythonFound = pythonCheck.terminationStatus == 0
+    // MARK: - Action buttons
 
-            // Check pix2tex
-            if pythonFound {
-                let pipCheck = Process()
-                pipCheck.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-                pipCheck.arguments = ["python3", "-c", "import pix2tex"]
-                try? pipCheck.run()
-                pipCheck.waitUntilExit()
-                pix2texInstalled = pipCheck.terminationStatus == 0
+    private var actionSection: some View {
+        HStack {
+            if !isFailed && envManager.stage != .ready {
+                Button(showLog ? "Hide Details" : "Show Details") {
+                    showLog.toggle()
+                }
+                .buttonStyle(.link)
             }
 
-            // Check server
-            if let url = URL(string: "\(Constants.serverBaseURL)/health") {
-                do {
-                    let (_, response) = try await URLSession.shared.data(from: url)
-                    serverWorking = (response as? HTTPURLResponse)?.statusCode == 200
-                } catch {
-                    serverWorking = false
+            Spacer()
+
+            if case .failed(let message) = envManager.stage {
+                if message.contains("Python 3 not found") {
+                    Button("Check Again") {
+                        Task { await envManager.runSetup() }
+                    }
+                } else {
+                    Button("Retry Setup") {
+                        envManager.resetEnvironment()
+                        Task { await envManager.runSetup() }
+                    }
                 }
             }
 
-            isChecking = false
+            if envManager.stage == .ready {
+                Button("Start Using Mathy") {
+                    appState.completeOnboarding()
+                }
+                .keyboardShortcut(.defaultAction)
+                .controlSize(.large)
+            }
+        }
+        .padding(20)
+    }
+
+    // MARK: - Step status logic
+
+    private enum StepStatus {
+        case pending, inProgress, done, failed
+    }
+
+    private var isFailed: Bool {
+        if case .failed = envManager.stage { return true }
+        return false
+    }
+
+    private var pythonStepStatus: StepStatus {
+        switch envManager.stage {
+        case .idle: return .pending
+        case .checkingPython: return .inProgress
+        case .failed(let msg) where msg.contains("Python"): return .failed
+        case .creatingVenv, .installingDeps, .verifying, .ready: return .done
+        case .failed: return .done
+        }
+    }
+
+    private var depsStepStatus: StepStatus {
+        switch envManager.stage {
+        case .idle, .checkingPython: return .pending
+        case .creatingVenv, .installingDeps: return .inProgress
+        case .verifying, .ready: return .done
+        case .failed(let msg) where msg.contains("Python"): return .pending
+        case .failed: return .failed
+        }
+    }
+
+    private var readyStepStatus: StepStatus {
+        switch envManager.stage {
+        case .ready: return .done
+        case .verifying: return .inProgress
+        case .failed(let msg) where msg.contains("Python"): return .pending
+        case .failed(let msg) where msg.contains("Verification"): return .failed
+        default: return .pending
         }
     }
 }

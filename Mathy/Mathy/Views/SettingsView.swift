@@ -4,9 +4,8 @@ import LaunchAtLogin
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
-    @AppStorage("pythonPath") private var pythonPath = ""
-    @AppStorage("serverPort") private var serverPort = 8765
     @AppStorage("autoCopy") private var autoCopy = true
+    @State private var showReinstallConfirm = false
 
     var body: some View {
         TabView {
@@ -36,16 +35,6 @@ struct SettingsView: View {
 
     private var serverTab: some View {
         Form {
-            TextField("Python Path (leave empty for auto-detect):", text: $pythonPath)
-                .textFieldStyle(.roundedBorder)
-
-            HStack {
-                Text("Server Port:")
-                TextField("", value: $serverPort, format: .number)
-                    .frame(width: 80)
-                    .textFieldStyle(.roundedBorder)
-            }
-
             HStack {
                 Circle()
                     .fill(statusColor)
@@ -57,6 +46,35 @@ struct SettingsView: View {
                 Button("Restart Server") {
                     appState.stopServer()
                     appState.startServer()
+                }
+            }
+
+            Divider()
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("OCR Engine")
+                        .font(.headline)
+                    Text("Reinstall if you experience issues with recognition.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button("Reinstall...") {
+                    showReinstallConfirm = true
+                }
+                .alert("Reinstall OCR Engine?", isPresented: $showReinstallConfirm) {
+                    Button("Cancel", role: .cancel) {}
+                    Button("Reinstall", role: .destructive) {
+                        appState.stopServer()
+                        appState.envManager.resetEnvironment()
+                        appState.needsSetup = true
+                        appState.showOnboarding()
+                    }
+                } message: {
+                    Text("This will remove and reinstall the OCR engine. It may take a few minutes.")
                 }
             }
         }

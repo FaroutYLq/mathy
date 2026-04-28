@@ -25,6 +25,7 @@ let package = Package(
                 .copy("Resources/latex_preview.html"),
                 .copy("Resources/katex"),
                 .copy("Resources/mathy_server.py"),
+                .copy("Resources/requirements.txt"),
             ]
         ),
     ]
