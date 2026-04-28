@@ -28,10 +28,10 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install fastapi uvicorn python-multipart Pillow
+        run: pip install pix2tex fastapi uvicorn python-multipart Pillow
 
       - name: Syntax check
         run: python -m py_compile server/mathy_server.py
 
       - name: Import check
-        run: python -c "from fastapi import FastAPI; from PIL import Image; print('imports ok')"
+        run: python -c "from pix2tex.cli import LatexOCR; from fastapi import FastAPI; from PIL import Image; import uvicorn; print('imports ok')"

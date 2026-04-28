@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     @Published var lastResult: ConversionRecord?
     @Published var showPreview = false
     @Published var isProcessing = false
+    @Published var lastError: String?
     @Published var needsSetup = false
 
     let serverManager = ServerManager()
@@ -20,7 +21,6 @@ final class AppState: ObservableObject {
     let ocrService = OCRService()
     let clipboardManager = ClipboardManager()
     let historyStore = HistoryStore()
-    let hotkeyManager = HotkeyManager()
     let envManager = PythonEnvironmentManager()
 
     private var cancellables = Set<AnyCancellable>()
@@ -99,6 +99,7 @@ final class AppState: ObservableObject {
             defer { isProcessing = false }
 
             do {
+                lastError = nil
                 let latex = try await ocrService.predict(imageURL: imageURL)
                 let record = ConversionRecord(
                     latex: latex,
@@ -110,6 +111,7 @@ final class AppState: ObservableObject {
                 showPreviewPopup(record: record)
             } catch {
                 print("OCR Error: \(error.localizedDescription)")
+                lastError = error.localizedDescription
             }
         }
     }

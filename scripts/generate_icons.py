@@ -57,16 +57,22 @@ def main():
         print(f"Error: SVG source not found at {SVG_SOURCE}", file=sys.stderr)
         sys.exit(1)
 
+    if not os.path.exists(MENUBAR_SVG):
+        print(f"Error: Menu bar SVG not found at {MENUBAR_SVG}", file=sys.stderr)
+        sys.exit(1)
+
     print(f"Source: {SVG_SOURCE}")
 
     # Generate app icon PNGs from SVG
     os.makedirs(ICON_DIR, exist_ok=True)
+    failed = False
     for filename, size in ICON_SIZES:
         path = os.path.join(ICON_DIR, filename)
         if render_svg_to_png(SVG_SOURCE, path, size):
             print(f"  {filename} ({size}x{size})")
         else:
             print(f"  FAILED: {filename}")
+            failed = True
 
     # Copy menu bar SVG into asset catalog
     os.makedirs(MENU_BAR_DIR, exist_ok=True)
@@ -103,6 +109,10 @@ def main():
         json.dump(contents, f, indent=2)
         f.write("\n")
     print("  Updated Contents.json for SVG")
+
+    if failed:
+        print("\nError: Some icons failed to generate.", file=sys.stderr)
+        sys.exit(1)
 
     print("\nDone!")
 

@@ -16,6 +16,12 @@ DMG_NAME="Mathy.dmg"
 
 echo "==> Building Mathy v${VERSION}"
 
+cleanup() {
+    echo "==> Cleaning up on error..."
+    rm -rf "$BUILD_DIR/dmg_staging" 2>/dev/null
+}
+trap cleanup ERR
+
 # Clean build directory
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"

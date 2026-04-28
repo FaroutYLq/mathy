@@ -38,10 +38,23 @@ curl -X POST -F "file=@test.png" http://127.0.0.1:8765/predict
 
 ### DMG Packaging
 
+To build a DMG locally:
+
 ```bash
-./scripts/build_dmg.sh 1.0.0
+./scripts/build_dmg.sh 0.0.0
 # Output: build/Mathy.dmg
 ```
+
+### Releasing
+
+To publish a release with the DMG on GitHub, push a version tag:
+
+```bash
+git tag v0.0.0
+git push origin v0.0.0
+```
+
+This triggers the `.github/workflows/release.yml` workflow, which builds the DMG and uploads it to a GitHub Release automatically. Users can then download **Mathy.dmg** from the [Releases page](https://github.com/FaroutYLq/mathy/releases/latest).
 
 ## Dependencies
 
@@ -95,10 +108,12 @@ mathy/
 
 ## CI
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push and PR:
+GitHub Actions runs on every push and PR (`.github/workflows/ci.yml`):
 
 1. **Swift build** — `cd Mathy && swift build` on macOS runner
 2. **Python checks** — validates server script syntax and imports
+
+A separate **release workflow** (`.github/workflows/release.yml`) runs when a `v*` tag is pushed. It builds the DMG and publishes it as a GitHub Release.
 
 ## Known Issues
 
