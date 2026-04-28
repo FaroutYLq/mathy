@@ -32,7 +32,7 @@ On first launch, Mathy automatically installs the Python OCR engine and download
 
 ## Usage
 
-Once running, Mathy appears as a **M(y)** icon in the menu bar.
+Once running, Mathy appears as a calligraphic **M** icon in the menu bar.
 
 - **Cmd+Shift+M** — Capture a screen region and convert to LaTeX
 - Click the menu bar icon to see server status, recent history, and settings

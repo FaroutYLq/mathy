@@ -6,7 +6,7 @@
       <stop offset="100%" stop-color="#4A48C4"/>
     </linearGradient>
   </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bg)"/>
   <text x="512" y="590"
         text-anchor="middle"
         font-family="Apple Chancery, Snell Roundhand, Palatino, Georgia, serif"
