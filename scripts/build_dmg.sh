@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/build_dmg.sh [version]
 # Output: build/Mathy.dmg
 
-VERSION="${1:-1.0.0}"
+VERSION="${1:-0.0.0}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 BUILD_DIR="$PROJECT_ROOT/build"
