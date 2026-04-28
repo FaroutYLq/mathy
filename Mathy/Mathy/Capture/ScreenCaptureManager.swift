@@ -1,35 +1,45 @@
-import Foundation
+import AppKit
 
-final class ScreenCaptureManager {
+final class ScreenCaptureManager: @unchecked Sendable {
     private let fileManager = FileManager.default
 
-    /// Invokes the native macOS screencapture tool for interactive region selection.
-    /// Returns the URL of the captured PNG, or nil if the user cancelled.
+    /// Uses AppleScript to invoke the system screenshot UI (same as Cmd+Shift+4).
+    /// This avoids TCC permission issues since the screenshot is handled by the
+    /// system's screencapture process, not our app.
     func captureRegion() async -> URL? {
         let tempDir = fileManager.temporaryDirectory
         let filename = "mathy_capture_\(UUID().uuidString).png"
         let outputURL = tempDir.appendingPathComponent(filename)
+        let path = outputURL.path
 
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        process.arguments = ["-i", "-s", outputURL.path]
+        // Use `do shell script` so screencapture runs as an independent process,
+        // not as a child of our app — avoids inheriting our TCC context.
+        let script = """
+        do shell script "/usr/sbin/screencapture -i -s " & quoted form of "\(path)"
+        """
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-        } catch {
-            print("screencapture failed: \(error)")
-            return nil
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async { [self] in
+                let fm = FileManager.default
+                var error: NSDictionary?
+                let appleScript = NSAppleScript(source: script)
+                appleScript?.executeAndReturnError(&error)
+
+                if let error {
+                    print("screencapture failed: \(error)")
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                guard fm.fileExists(atPath: path) else {
+                    continuation.resume(returning: nil)
+                    return
+                }
+
+                let persistentURL = self.saveToPersistentStorage(tempURL: outputURL)
+                continuation.resume(returning: persistentURL ?? outputURL)
+            }
         }
-
-        guard process.terminationStatus == 0,
-              fileManager.fileExists(atPath: outputURL.path) else {
-            return nil
-        }
-
-        // Copy to persistent storage
-        let persistentURL = saveToPersistentStorage(tempURL: outputURL)
-        return persistentURL ?? outputURL
     }
 
     private func saveToPersistentStorage(tempURL: URL) -> URL? {

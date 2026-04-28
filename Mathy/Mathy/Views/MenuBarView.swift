@@ -76,17 +76,29 @@ struct MenuBarView: View {
             }
 
             // Footer actions
-            Button {
-                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-            } label: {
-                HStack {
-                    Image(systemName: "gear")
-                    Text("Settings...")
+            if #available(macOS 14.0, *) {
+                SettingsLink {
+                    HStack {
+                        Image(systemName: "gear")
+                        Text("Settings...")
+                    }
                 }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            } else {
+                Button {
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                } label: {
+                    HStack {
+                        Image(systemName: "gear")
+                        Text("Settings...")
+                    }
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
             }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
 
             Button {
                 appState.stopServer()
