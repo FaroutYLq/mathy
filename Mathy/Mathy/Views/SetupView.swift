@@ -25,8 +25,10 @@ struct OnboardingView: View {
 
     private var headerSection: some View {
         VStack(spacing: 6) {
-            Image(systemName: "function")
-                .font(.system(size: 36))
+            Image("MenuBarIcon")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 36, height: 36)
                 .foregroundColor(.accentColor)
 
             Text(headerTitle)

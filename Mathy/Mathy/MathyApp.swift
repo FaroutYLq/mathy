@@ -22,7 +22,7 @@ struct MathyApp: App {
             MenuBarView()
                 .environmentObject(appState)
         } label: {
-            Image(systemName: "function")
+            Image("MenuBarIcon")
         }
         .menuBarExtraStyle(.window)
 

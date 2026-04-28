@@ -19,9 +19,9 @@ let package = Package(
             exclude: [
                 "Info.plist",
                 "Mathy.entitlements",
-                "Assets.xcassets",
             ],
             resources: [
+                .process("Assets.xcassets"),
                 .copy("Resources/latex_preview.html"),
                 .copy("Resources/katex"),
                 .copy("Resources/mathy_server.py"),

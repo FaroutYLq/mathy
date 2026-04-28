@@ -44,7 +44,7 @@ Then build and run (Cmd+R).
 
 ## Usage
 
-Once running, Mathy appears as an **f(x)** icon in the menu bar.
+Once running, Mathy appears as a **M(y)** icon in the menu bar.
 
 - **Cmd+Shift+M** — Capture a screen region and convert to LaTeX
 - Click the menu bar icon to see server status, recent history, and settings
