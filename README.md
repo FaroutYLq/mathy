@@ -10,87 +10,14 @@ A macOS menu bar app that captures math equations from your screen and converts 
 
 Mathy runs a local Python server that keeps the OCR model loaded in memory, so after the initial ~15s startup, each conversion takes only ~100-300ms.
 
-## Architecture
+## Getting Started
 
-```
-┌──────────────────┐       HTTP        ┌──────────────────┐
-│   Mathy.app      │ ◄──────────────►  │  mathy-server    │
-│   (Swift/SwiftUI)│   localhost:8765   │  (Python/FastAPI) │
-│                  │                    │                  │
-│  - Menu bar UI   │  POST /predict    │  - pix2tex model │
-│  - Screen capture│  ──────────────►  │  - Loaded once   │
-│  - Hotkey        │                    │  - Fast inference│
-│  - KaTeX preview │  {"latex": "..."}  │                  │
-│  - History       │  ◄────────────── │                  │
-└──────────────────┘                    └──────────────────┘
-```
-
-## Project Structure
-
-```
-mathy/
-├── Mathy/                      # Swift macOS app
-│   ├── Package.swift           # SPM config
-│   ├── project.yml             # XcodeGen spec
-│   └── Mathy/
-│       ├── MathyApp.swift      # @main entry point (MenuBarExtra)
-│       ├── App/                # AppState, HotkeyManager
-│       ├── Capture/            # Screen region capture
-│       ├── OCR/                # HTTP client + server process manager
-│       ├── Views/              # MenuBar, Preview, Settings, Setup
-│       ├── Models/             # ConversionRecord, HistoryStore
-│       ├── Utilities/          # Clipboard, Constants
-│       └── Resources/          # KaTeX bundle, HTML template
-├── server/
-│   ├── mathy_server.py         # FastAPI server wrapping pix2tex
-│   └── requirements.txt
-└── scripts/
-    └── setup.sh                # Python environment setup
-```
-
-## Requirements
+### Requirements
 
 - **macOS 13+** (Ventura or later)
-- **Python 3.8+**
-- **Xcode 15+** (for building the app, or use `swift build` with Command Line Tools)
+- **Python 3.8+** (pre-installed on most Macs, or `brew install python3`)
 
-## Setup
-
-### 1. Python Server
-
-```bash
-# Create venv and install dependencies (pix2tex, fastapi, uvicorn, etc.)
-./scripts/setup.sh
-```
-
-Or manually:
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r server/requirements.txt
-```
-
-### 2. Test the Server
-
-```bash
-source .venv/bin/activate
-python server/mathy_server.py
-```
-
-The first run downloads the pix2tex model (~200MB). Once you see `Model loaded successfully`, test it:
-
-```bash
-# Health check
-curl http://127.0.0.1:8765/health
-
-# OCR prediction (replace test.png with any math equation image)
-curl -X POST -F "file=@test.png" http://127.0.0.1:8765/predict
-```
-
-### 3. Build the App
-
-**Option A: Swift Package Manager (command line)**
+### Install & Run
 
 ```bash
 cd Mathy
@@ -98,16 +25,22 @@ swift build
 .build/debug/Mathy
 ```
 
-**Option B: Xcode (recommended)**
+That's it. On first launch, Mathy automatically:
+1. Creates a Python environment
+2. Installs the OCR engine (pix2tex) and dependencies
+3. Downloads the model (~200MB on first run)
+4. Starts the server
+
+A setup window shows progress. Once complete, click **Start Using Mathy** and you're ready to go.
+
+### Or build with Xcode
 
 ```bash
-brew install xcodegen
 cd Mathy
-xcodegen generate
 open Mathy.xcodeproj
 ```
 
-Then build and run from Xcode (Cmd+R).
+Then build and run (Cmd+R).
 
 ## Usage
 
@@ -120,27 +53,69 @@ Once running, Mathy appears as an **f(x)** icon in the menu bar.
 
 ### Settings
 
-- Custom hotkey
-- Python interpreter path
-- Server port
+- Custom capture hotkey
 - Auto-copy to clipboard toggle
 - Launch at login
+- Reinstall OCR engine (if you experience issues)
 
-## Server API
+## Architecture
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Server status and model load state |
-| `/predict` | POST | Multipart image upload, returns `{"latex": "..."}` |
+```
+┌──────────────────┐       HTTP        ┌──────────────────┐
+│   Mathy.app      │ <──────────────>  │  mathy-server    │
+│   (Swift/SwiftUI)│   localhost:8765   │  (Python/FastAPI) │
+│                  │                    │                  │
+│  - Menu bar UI   │  POST /predict    │  - pix2tex model │
+│  - Screen capture│  ──────────────>  │  - Loaded once   │
+│  - Hotkey        │                    │  - Fast inference│
+│  - KaTeX preview │  {"latex": "..."}  │                  │
+│  - History       │  <────────────── │                  │
+└──────────────────┘                    └──────────────────┘
+```
 
-## How the App Manages the Server
-
-The app automatically launches and monitors the Python server:
-
-- Detects Python from common paths (`/opt/homebrew/bin/python3`, `/usr/local/bin/python3`, project `.venv`, or user-configured path)
-- Polls `/health` until the model is loaded
+The app manages the server automatically:
+- Creates and maintains a Python venv at `~/Library/Application Support/Mathy/venv/`
+- Launches the server on startup, polls `/health` until the model is loaded
 - Auto-restarts on crash (up to 3 attempts with exponential backoff)
 - Terminates the server on app quit
+
+## Project Structure
+
+```
+mathy/
+├── Mathy/                      # Swift macOS app
+│   ├── Package.swift           # SPM config
+│   └── Mathy/
+│       ├── MathyApp.swift      # @main entry point (MenuBarExtra)
+│       ├── App/                # AppState, HotkeyManager, PythonEnvironmentManager
+│       ├── Capture/            # Screen region capture
+│       ├── OCR/                # HTTP client + server process manager
+│       ├── Views/              # MenuBar, Onboarding, Preview, Settings
+│       ├── Models/             # ConversionRecord, HistoryStore
+│       ├── Utilities/          # Clipboard, Constants
+│       └── Resources/          # KaTeX bundle, HTML template, server script, requirements.txt
+├── server/
+│   ├── mathy_server.py         # FastAPI server wrapping pix2tex
+│   └── requirements.txt
+└── scripts/
+    └── setup.sh                # Manual Python env setup (for development)
+```
+
+## Development
+
+For development, you can also set up the Python server manually:
+
+```bash
+./scripts/setup.sh          # Creates .venv, installs deps
+source .venv/bin/activate
+python server/mathy_server.py
+```
+
+Test endpoints:
+```bash
+curl http://127.0.0.1:8765/health
+curl -X POST -F "file=@test.png" http://127.0.0.1:8765/predict
+```
 
 ## License
 
