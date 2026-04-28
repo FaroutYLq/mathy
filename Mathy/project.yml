@@ -22,9 +22,17 @@ targets:
       - path: Mathy
         excludes:
           - Resources/katex/**
-    resources:
-      - path: Mathy/Resources/latex_preview.html
+          - Resources/latex_preview.html
+          - Resources/mathy_server.py
+          - Resources/requirements.txt
       - path: Mathy/Resources/katex
+        type: folder
+        buildPhase: resources
+      - path: Mathy/Resources/latex_preview.html
+        buildPhase: resources
+      - path: Mathy/Resources/mathy_server.py
+        buildPhase: resources
+      - path: Mathy/Resources/requirements.txt
         buildPhase: resources
     settings:
       base:
@@ -42,3 +50,5 @@ targets:
       - package: LaunchAtLogin
     entitlements:
       path: Mathy/Mathy.entitlements
+      properties:
+        com.apple.security.automation.apple-events: true
