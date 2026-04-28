@@ -1,5 +1,9 @@
 # Mathy
 
+<p align="center">
+  <img src="Mathy/Mathy/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="Mathy logo">
+</p>
+
 A macOS menu bar app that captures math equations from your screen and converts them to LaTeX using [pix2tex/LaTeX-OCR](https://github.com/lukas-blecher/LaTeX-OCR).
 
 ## How It Works
@@ -44,7 +48,7 @@ Then build and run (Cmd+R).
 
 ## Usage
 
-Once running, Mathy appears as an **f(x)** icon in the menu bar.
+Once running, Mathy appears as a **M(y)** icon in the menu bar.
 
 - **Cmd+Shift+M** — Capture a screen region and convert to LaTeX
 - Click the menu bar icon to see server status, recent history, and settings
