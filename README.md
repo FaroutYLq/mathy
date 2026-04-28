@@ -10,6 +10,10 @@
 
 A macOS menu bar app that captures math equations from your screen and converts them to LaTeX using [pix2tex/LaTeX-OCR](https://github.com/lukas-blecher/LaTeX-OCR).
 
+<p align="center">
+  <img src="docs/assets/demo.png" width="400" alt="Mathy demo — screen capture to LaTeX">
+</p>
+
 ## How It Works
 
 1. Press **Cmd+Shift+M** (configurable)
