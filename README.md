@@ -20,37 +20,14 @@ Mathy runs a local Python server that keeps the OCR model loaded in memory, so a
 
 1. Download **Mathy.dmg** from [Releases](https://github.com/FaroutYLq/mathy/releases)
 2. Open the DMG and drag **Mathy** to **Applications**
-3. First launch: right-click Mathy.app > **Open** (required once to bypass Gatekeeper for unsigned apps)
+3. First launch: right-click Mathy.app > **Open** (required once for unsigned apps)
 
-On first launch, Mathy automatically installs the Python OCR engine (pix2tex) and downloads the model (~200MB). A setup window shows progress — no terminal needed.
+On first launch, Mathy automatically installs the Python OCR engine and downloads the model (~200MB). A setup window shows progress — no terminal needed.
 
 ### Requirements
 
 - **macOS 13+** (Ventura or later)
 - **Python 3.8+** (pre-installed on most Macs, or `brew install python3`)
-
-### Build from Source
-
-```bash
-cd Mathy
-swift build
-.build/debug/Mathy
-```
-
-Or open in Xcode:
-
-```bash
-cd Mathy
-open Mathy.xcodeproj
-# Build and run (Cmd+R)
-```
-
-To build a DMG for distribution:
-
-```bash
-./scripts/build_dmg.sh 1.0.0
-# Output: build/Mathy.dmg
-```
 
 ## Usage
 
@@ -61,76 +38,9 @@ Once running, Mathy appears as a **M(y)** icon in the menu bar.
 - Converted LaTeX is automatically copied to your clipboard
 - A preview popup shows the captured image alongside rendered LaTeX
 
-### Settings
-
-- Custom capture hotkey
-- Auto-copy to clipboard toggle
-- Launch at login
-- Reinstall OCR engine (if you experience issues)
-
-## Architecture
-
-```
-┌────────────────────┐                    ┌────────────────────┐
-│     Mathy.app      │       HTTP         │    mathy-server    │
-│   (Swift/SwiftUI)  │ <──────────────>   │  (Python/FastAPI)  │
-│                    │  localhost:8765    │                    │
-│  - Menu bar UI     │                    │  - pix2tex model   │
-│  - Screen capture  │  POST /predict     │  - Loaded once     │
-│  - Hotkey          │  ──────────────>   │  - Fast inference  │
-│  - KaTeX preview   │                    │                    │
-│  - History         │  {"latex": "..."}  │                    │
-│                    │  <──────────────   │                    │
-└────────────────────┘                    └────────────────────┘
-```
-
-The app manages the server automatically:
-- Creates and maintains a Python venv at `~/Library/Application Support/Mathy/venv/`
-- Launches the server on startup, polls `/health` until the model is loaded
-- Auto-restarts on crash (up to 3 attempts with exponential backoff)
-- Terminates the server on app quit
-
-## Project Structure
-
-```
-mathy/
-├── Mathy/                      # Swift macOS app
-│   ├── Package.swift           # SPM config
-│   └── Mathy/
-│       ├── MathyApp.swift      # @main entry point (MenuBarExtra)
-│       ├── App/                # AppState, HotkeyManager, PythonEnvironmentManager
-│       ├── Capture/            # Screen region capture
-│       ├── OCR/                # HTTP client + server process manager
-│       ├── Views/              # MenuBar, Onboarding, Preview, Settings
-│       ├── Models/             # ConversionRecord, HistoryStore
-│       ├── Utilities/          # Clipboard, Constants
-│       └── Resources/          # KaTeX bundle, HTML template, server script, requirements.txt
-├── server/
-│   ├── mathy_server.py         # FastAPI server wrapping pix2tex
-│   └── requirements.txt
-├── .github/workflows/
-│   └── ci.yml                  # CI: Swift build + Python server checks
-└── scripts/
-    ├── setup.sh                # Manual Python env setup (for development)
-    ├── build_dmg.sh            # Build DMG for distribution
-    └── generate_icons.py       # Generate app icon assets
-```
-
 ## Development
 
-For development, you can also set up the Python server manually:
-
-```bash
-./scripts/setup.sh          # Creates .venv, installs deps
-source .venv/bin/activate
-python server/mathy_server.py
-```
-
-Test endpoints:
-```bash
-curl http://127.0.0.1:8765/health
-curl -X POST -F "file=@test.png" http://127.0.0.1:8765/predict
-```
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for build instructions, architecture, project structure, and implementation details.
 
 ## License
 
