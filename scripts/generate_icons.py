@@ -106,9 +106,9 @@ def generate_menu_bar_icon(size):
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    text = "M(y)"  # Rendered in calligraphic font
+    text = "M"  # Rendered in calligraphic font
 
-    font_size = int(size * 0.65)
+    font_size = int(size * 0.75)
     font_path = find_font()
     try:
         font = ImageFont.truetype(font_path, font_size) if font_path else ImageFont.load_default()
