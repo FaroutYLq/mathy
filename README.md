@@ -40,7 +40,7 @@ Once running, Mathy appears as a **M(y)** icon in the menu bar.
 
 ## Documentation
 
-Full technical documentation is available at [mathy.readthedocs.io](https://mathy.readthedocs.io), covering architecture, build instructions, project structure, and implementation details.
+Full technical documentation is available at [mathy.readthedocs.io](https://mathy.readthedocs.io/en/latest/), covering architecture, build instructions, project structure, and implementation details.
 
 ## License
 
