@@ -64,7 +64,7 @@ Once running, Mathy appears as an **f(x)** icon in the menu bar.
 ┌────────────────────┐                    ┌────────────────────┐
 │     Mathy.app      │       HTTP         │    mathy-server    │
 │   (Swift/SwiftUI)  │ <──────────────>   │  (Python/FastAPI)  │
-│                    │  localhost:8765     │                    │
+│                    │  localhost:8765    │                    │
 │  - Menu bar UI     │                    │  - pix2tex model   │
 │  - Screen capture  │  POST /predict     │  - Loaded once     │
 │  - Hotkey          │  ──────────────>   │  - Fast inference  │
