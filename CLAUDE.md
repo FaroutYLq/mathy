@@ -39,7 +39,8 @@ Mathy/Mathy/
   Utilities/              # ClipboardManager, Constants
   Resources/              # Bundled KaTeX, latex_preview.html, mathy_server.py, requirements.txt
 server/                   # FastAPI server + requirements.txt (canonical copy)
-scripts/                  # setup.sh for developer Python env setup
+scripts/                  # setup.sh, build_dmg.sh, generate_icons.py
+.github/workflows/        # CI pipeline (Swift build + Python checks)
 ```
 
 ## Key Patterns

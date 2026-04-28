@@ -4,6 +4,8 @@
   <img src="Mathy/Mathy/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="Mathy logo">
 </p>
 
+[![CI](https://github.com/FaroutYLq/mathy/actions/workflows/ci.yml/badge.svg)](https://github.com/FaroutYLq/mathy/actions/workflows/ci.yml)
+
 A macOS menu bar app that captures math equations from your screen and converts them to LaTeX using [pix2tex/LaTeX-OCR](https://github.com/lukas-blecher/LaTeX-OCR).
 
 ## How It Works
@@ -106,8 +108,12 @@ mathy/
 ├── server/
 │   ├── mathy_server.py         # FastAPI server wrapping pix2tex
 │   └── requirements.txt
+├── .github/workflows/
+│   └── ci.yml                  # CI: Swift build + Python server checks
 └── scripts/
-    └── setup.sh                # Manual Python env setup (for development)
+    ├── setup.sh                # Manual Python env setup (for development)
+    ├── build_dmg.sh            # Build DMG for distribution
+    └── generate_icons.py       # Generate app icon assets
 ```
 
 ## Development
