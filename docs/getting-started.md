@@ -4,7 +4,10 @@
 
 1. Download **Mathy.dmg** from [Releases](https://github.com/FaroutYLq/mathy/releases)
 2. Open the DMG and drag **Mathy** to **Applications**
-3. First launch: right-click Mathy.app > **Open** (required once for unsigned apps)
+3. **Important:** Do NOT double-click to open on first launch — macOS will show a "Not Opened" warning and offer to move it to Trash. Instead, **right-click** (or Control-click) Mathy.app and choose **Open**, then click **Open** in the dialog. This is only required once.
+
+!!! warning "If you accidentally clicked Move to Trash"
+    Retrieve Mathy from the Trash (open Trash in Dock, drag it back to Applications), then right-click > **Open** as described above.
 
 On first launch, Mathy automatically installs the Python OCR engine and downloads the model (~200MB). A setup window shows progress — no terminal needed. See [Onboarding & Python Setup](onboarding.md) for details on what happens behind the scenes.
 
