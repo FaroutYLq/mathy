@@ -8,12 +8,16 @@ __pycache__/
 .DS_Store
 
 # Xcode
+Mathy/Mathy.xcodeproj/
 Mathy/build/
 Mathy/DerivedData/
 Mathy/*.xcodeproj/xcuserdata/
 Mathy/*.xcodeproj/project.xcworkspace/xcuserdata/
 Mathy/*.xcworkspace/xcuserdata/
 *.xcuserstate
+
+# Build output
+build/
 
 # SwiftPM
 .build/

@@ -14,14 +14,20 @@ A macOS menu bar app that captures math equations from your screen and converts 
 
 Mathy runs a local Python server that keeps the OCR model loaded in memory, so after the initial ~15s startup, each conversion takes only ~100-300ms.
 
-## Getting Started
+## Install
+
+1. Download **Mathy.dmg** from [Releases](https://github.com/FaroutYLq/mathy/releases)
+2. Open the DMG and drag **Mathy** to **Applications**
+3. First launch: right-click Mathy.app > **Open** (required once to bypass Gatekeeper for unsigned apps)
+
+On first launch, Mathy automatically installs the Python OCR engine (pix2tex) and downloads the model (~200MB). A setup window shows progress — no terminal needed.
 
 ### Requirements
 
 - **macOS 13+** (Ventura or later)
 - **Python 3.8+** (pre-installed on most Macs, or `brew install python3`)
 
-### Install & Run
+### Build from Source
 
 ```bash
 cd Mathy
@@ -29,22 +35,20 @@ swift build
 .build/debug/Mathy
 ```
 
-That's it. On first launch, Mathy automatically:
-1. Creates a Python environment
-2. Installs the OCR engine (pix2tex) and dependencies
-3. Downloads the model (~200MB on first run)
-4. Starts the server
-
-A setup window shows progress. Once complete, click **Start Using Mathy** and you're ready to go.
-
-### Or build with Xcode
+Or open in Xcode:
 
 ```bash
 cd Mathy
 open Mathy.xcodeproj
+# Build and run (Cmd+R)
 ```
 
-Then build and run (Cmd+R).
+To build a DMG for distribution:
+
+```bash
+./scripts/build_dmg.sh 1.0.0
+# Output: build/Mathy.dmg
+```
 
 ## Usage
 
