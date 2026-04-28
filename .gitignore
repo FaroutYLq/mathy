@@ -1,0 +1,23 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Xcode
+Mathy/build/
+Mathy/DerivedData/
+Mathy/*.xcodeproj/xcuserdata/
+Mathy/*.xcodeproj/project.xcworkspace/xcuserdata/
+Mathy/*.xcworkspace/xcuserdata/
+*.xcuserstate
+
+# SwiftPM
+.build/
+.swiftpm/
+
+# KaTeX (bundled, but large)
+# Mathy/Mathy/Resources/katex/
