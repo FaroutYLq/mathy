@@ -1,0 +1,5 @@
+pix2tex
+fastapi
+uvicorn[standard]
+python-multipart
+Pillow

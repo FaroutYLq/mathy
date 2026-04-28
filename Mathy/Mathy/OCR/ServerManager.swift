@@ -179,14 +179,21 @@ final class ServerManager: ObservableObject {
     }
 
     private func findPython() -> String? {
+        // 1. Managed venv (auto-installed by onboarding)
+        let managedPython = PythonEnvironmentManager.venvPython
+        if FileManager.default.isExecutableFile(atPath: managedPython) {
+            print("[ServerManager] Using managed Python: \(managedPython)")
+            return managedPython
+        }
+
+        // 2. User-specified path
         let userDefault = UserDefaults.standard.string(forKey: "pythonPath")
         if let userDefault, !userDefault.isEmpty, FileManager.default.isExecutableFile(atPath: userDefault) {
             return userDefault
         }
 
+        // 3. Project venv (developer workflow)
         var candidates = [String]()
-
-        // Project venv (most reliable for this project)
         if let root = Self.findProjectRoot() {
             candidates.append(root.appendingPathComponent(".venv/bin/python3").path)
         }
@@ -204,7 +211,7 @@ final class ServerManager: ObservableObject {
             }
         }
 
-        // Fallback: `which python3`
+        // 4. Fallback: `which python3`
         let which = Process()
         which.executableURL = URL(fileURLWithPath: "/usr/bin/which")
         which.arguments = ["python3"]

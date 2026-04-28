@@ -4,8 +4,6 @@ import LaunchAtLogin
 
 struct SettingsView: View {
     @EnvironmentObject var appState: AppState
-    @AppStorage("pythonPath") private var pythonPath = ""
-    @AppStorage("serverPort") private var serverPort = 8765
     @AppStorage("autoCopy") private var autoCopy = true
 
     var body: some View {
@@ -36,16 +34,6 @@ struct SettingsView: View {
 
     private var serverTab: some View {
         Form {
-            TextField("Python Path (leave empty for auto-detect):", text: $pythonPath)
-                .textFieldStyle(.roundedBorder)
-
-            HStack {
-                Text("Server Port:")
-                TextField("", value: $serverPort, format: .number)
-                    .frame(width: 80)
-                    .textFieldStyle(.roundedBorder)
-            }
-
             HStack {
                 Circle()
                     .fill(statusColor)
@@ -57,6 +45,27 @@ struct SettingsView: View {
                 Button("Restart Server") {
                     appState.stopServer()
                     appState.startServer()
+                }
+            }
+
+            Divider()
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("OCR Engine")
+                        .font(.headline)
+                    Text("Reinstall if you experience issues with recognition.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button("Reinstall...") {
+                    appState.stopServer()
+                    appState.envManager.resetEnvironment()
+                    appState.needsSetup = true
+                    appState.showOnboarding()
                 }
             }
         }

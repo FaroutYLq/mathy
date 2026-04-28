@@ -13,6 +13,7 @@ final class AppState: ObservableObject {
     @Published var lastResult: ConversionRecord?
     @Published var showPreview = false
     @Published var isProcessing = false
+    @Published var needsSetup = true
 
     let serverManager = ServerManager()
     let captureManager = ScreenCaptureManager()
@@ -20,9 +21,11 @@ final class AppState: ObservableObject {
     let clipboardManager = ClipboardManager()
     let historyStore = HistoryStore()
     let hotkeyManager = HotkeyManager()
+    let envManager = PythonEnvironmentManager()
 
     private var cancellables = Set<AnyCancellable>()
     private var previewPanel: PreviewPanel?
+    private var onboardingWindow: NSWindow?
 
     enum ServerStatus: String {
         case stopped = "Stopped"
@@ -34,7 +37,20 @@ final class AppState: ObservableObject {
     init() {
         setupHotkey()
         setupServerMonitoring()
-        startServer()
+        checkSetupAndStart()
+    }
+
+    private func checkSetupAndStart() {
+        Task {
+            let ready = await envManager.checkExistingSetup()
+            if ready {
+                needsSetup = false
+                startServer()
+            } else {
+                needsSetup = true
+                showOnboarding()
+            }
+        }
     }
 
     private func setupHotkey() {
@@ -100,6 +116,38 @@ final class AppState: ObservableObject {
     func copyToClipboard(_ text: String) {
         clipboardManager.copy(text)
     }
+
+    // MARK: - Onboarding
+
+    func showOnboarding() {
+        if onboardingWindow == nil {
+            let view = OnboardingView(envManager: envManager)
+                .environmentObject(self)
+            let hostingView = NSHostingView(rootView: view)
+            let window = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 520, height: 440),
+                styleMask: [.titled, .closable],
+                backing: .buffered,
+                defer: false
+            )
+            window.contentView = hostingView
+            window.title = "Mathy"
+            window.center()
+            window.isReleasedWhenClosed = false
+            onboardingWindow = window
+        }
+        onboardingWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func completeOnboarding() {
+        needsSetup = false
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        startServer()
+    }
+
+    // MARK: - Preview
 
     private func showPreviewPopup(record: ConversionRecord) {
         if previewPanel == nil {
