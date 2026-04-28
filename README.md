@@ -38,9 +38,9 @@ Once running, Mathy appears as a **M(y)** icon in the menu bar.
 - Converted LaTeX is automatically copied to your clipboard
 - A preview popup shows the captured image alongside rendered LaTeX
 
-## Development
+## Documentation
 
-See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for build instructions, architecture, project structure, and implementation details.
+Full technical documentation is available at [mathy.readthedocs.io](https://mathy.readthedocs.io), covering architecture, build instructions, project structure, and implementation details.
 
 ## License
 
