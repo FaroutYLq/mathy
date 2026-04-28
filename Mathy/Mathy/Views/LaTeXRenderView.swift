@@ -18,15 +18,27 @@ struct LaTeXRenderView: NSViewRepresentable {
         loadLatex(in: webView)
     }
 
+    /// Escape a LaTeX string for safe embedding in HTML/JS contexts.
+    private func escapeForHTML(_ str: String) -> String {
+        str.replacingOccurrences(of: "\\", with: "\\\\")
+           .replacingOccurrences(of: "\"", with: "\\\"")
+           .replacingOccurrences(of: "'", with: "\\'")
+           .replacingOccurrences(of: "<", with: "\\x3c")
+           .replacingOccurrences(of: ">", with: "\\x3e")
+           .replacingOccurrences(of: "&", with: "\\x26")
+           .replacingOccurrences(of: "`", with: "\\x60")
+           .replacingOccurrences(of: "\n", with: "\\n")
+           .replacingOccurrences(of: "\r", with: "\\r")
+    }
+
     private func loadLatex(in webView: WKWebView) {
+        let escaped = escapeForHTML(latex)
+
         // Try bundled HTML first
         if let htmlURL = Bundle.main.url(forResource: "latex_preview", withExtension: "html") {
             let baseURL = htmlURL.deletingLastPathComponent()
             do {
                 var html = try String(contentsOf: htmlURL)
-                let escaped = latex
-                    .replacingOccurrences(of: "\\", with: "\\\\")
-                    .replacingOccurrences(of: "\"", with: "\\\"")
                 html = html.replacingOccurrences(of: "{{LATEX}}", with: escaped)
                 webView.loadHTMLString(html, baseURL: baseURL)
                 return
@@ -36,10 +48,6 @@ struct LaTeXRenderView: NSViewRepresentable {
         }
 
         // Fallback: inline HTML with CDN KaTeX
-        let escaped = latex
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-
         let html = """
         <!DOCTYPE html>
         <html>

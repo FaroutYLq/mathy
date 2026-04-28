@@ -159,6 +159,20 @@ struct MenuBarView: View {
                 .padding(.vertical, 4)
             }
 
+            if let error = appState.lastError {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.caption)
+                    Text(error)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 4)
+            }
+
             Divider()
 
             // History

@@ -1,6 +1,11 @@
 import Foundation
 import Combine
 
+private struct HealthResponse: Decodable {
+    let status: String
+    let model_loaded: Bool
+}
+
 @MainActor
 final class ServerManager: ObservableObject {
     enum Status {
@@ -36,10 +41,6 @@ final class ServerManager: ObservableObject {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200 else {
                 return false
-            }
-            struct HealthResponse: Decodable {
-                let status: String
-                let model_loaded: Bool
             }
             let health = try JSONDecoder().decode(HealthResponse.self, from: data)
             return health.model_loaded
@@ -135,11 +136,6 @@ final class ServerManager: ObservableObject {
                 return
             }
 
-            struct HealthResponse: Decodable {
-                let status: String
-                let model_loaded: Bool
-            }
-
             let health = try JSONDecoder().decode(HealthResponse.self, from: data)
             if health.model_loaded {
                 status = .running
@@ -217,13 +213,41 @@ final class ServerManager: ObservableObject {
                 let which = Process()
                 which.executableURL = URL(fileURLWithPath: "/usr/bin/which")
                 which.arguments = ["python3"]
-                let pipe = Pipe()
-                which.standardOutput = pipe
-                try? which.run()
-                which.waitUntilExit()
-                let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                if let output, !output.isEmpty {
+                let outPipe = Pipe()
+                let errPipe = Pipe()
+                which.standardOutput = outPipe
+                which.standardError = errPipe
+
+                // Drain pipes via readabilityHandler to avoid deadlock
+                let lock = NSLock()
+                var collected = ""
+                outPipe.fileHandleForReading.readabilityHandler = { handle in
+                    let data = handle.availableData
+                    if let str = String(data: data, encoding: .utf8), !str.isEmpty {
+                        lock.lock()
+                        collected += str
+                        lock.unlock()
+                    }
+                }
+                errPipe.fileHandleForReading.readabilityHandler = { handle in
+                    _ = handle.availableData // discard stderr
+                }
+
+                do {
+                    try which.run()
+                    which.waitUntilExit()
+                } catch {
+                    // which failed to launch
+                }
+
+                outPipe.fileHandleForReading.readabilityHandler = nil
+                errPipe.fileHandleForReading.readabilityHandler = nil
+
+                lock.lock()
+                let output = collected.trimmingCharacters(in: .whitespacesAndNewlines)
+                lock.unlock()
+
+                if !output.isEmpty {
                     print("[ServerManager] Found Python via which: \(output)")
                     continuation.resume(returning: output)
                 } else {
